@@ -133,7 +133,7 @@ Morbi tempor sem ac nisl lacinia imperdiet. Quisque ligula neque, tempor id tris
 							}
 						}
 						break;
-					default: break;// throw new ArgumentException();
+					default: throw new ArgumentException();
 				}
 			}
 		}
