@@ -1,12 +1,12 @@
-﻿using DiffPlex;
-using DiffPlex.DiffBuilder;
-using DiffPlex.DiffBuilder.Model;
-using System;
+﻿using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using DiffPlex;
+using DiffPlex.DiffBuilder;
+using DiffPlex.DiffBuilder.Model;
 
 namespace WpfDiff
 {
@@ -95,10 +95,11 @@ Morbi tempor sem ac nisl lacinia imperdiet. Quisque ligula neque, tempor id tris
 
 			var diffBuilder = new SideBySideDiffBuilder(new Differ());
 			var diff = diffBuilder.BuildDiffModel(this.before.Text, this.after.Text);
-			
 
-			ShowDiffs(this.beforeDiff, diff.OldText.Lines);
-			ShowDiffs(this.afterDiff, diff.NewText.Lines);
+
+			var zippedDiffs = Enumerable.Zip(diff.OldText.Lines, diff.NewText.Lines, (oldLine, newLine) => Tuple.Create(oldLine, newLine)).ToList();
+
+			ShowDiffs(this.beforeDiff, this.afterDiff, zippedDiffs);
 		}
 
 
@@ -107,36 +108,68 @@ Morbi tempor sem ac nisl lacinia imperdiet. Quisque ligula neque, tempor id tris
 
 
 
-		private static void ShowDiffs(RichTextBox diffBox, System.Collections.Generic.List<DiffPiece> lines)
+		private static void ShowDiffs(RichTextBox oldDiffBox, RichTextBox newDiffBox, System.Collections.Generic.List<Tuple<DiffPiece, DiffPiece>> lines)
 		{
-			diffBox.Document.Blocks.Clear();
 			foreach (var line in lines)
 			{
-				switch (line.Type)
+				var synchroLineLength = Math.Max(line.Item1.Text?.Length ?? 0, line.Item2.Text?.Length ?? 0);
+				var lineSubPieces = Enumerable.Zip(line.Item1.SubPieces, line.Item2.SubPieces, (oldPiece, newPiece) => new { oldPiece, newPiece, synchroLength = Math.Max(oldPiece.Text?.Length ?? 0, newPiece.Text?.Length ?? 0) });
+
+				var oldLine = line.Item1;
+				switch (oldLine.Type)
 				{
-					case ChangeType.Unchanged: AppendParagraph(diffBox, line.Text); break;
-					case ChangeType.Imaginary: AppendParagraph(diffBox, string.Empty, Brushes.Gray); break;
-					case ChangeType.Inserted: AppendParagraph(diffBox, line.Text, Brushes.LightGreen); break;
-					case ChangeType.Deleted: AppendParagraph(diffBox, line.Text, Brushes.OrangeRed); break;
+					case ChangeType.Unchanged: AppendParagraph(oldDiffBox, oldLine.Text ?? string.Empty); break;
+					case ChangeType.Imaginary: AppendParagraph(oldDiffBox, oldLine.Text ?? string.Empty, Brushes.Gray); break;
+					case ChangeType.Inserted: AppendParagraph(oldDiffBox, oldLine.Text ?? string.Empty, Brushes.LightGreen); break;
+					case ChangeType.Deleted: AppendParagraph(oldDiffBox, oldLine.Text ?? string.Empty, Brushes.OrangeRed); break;
 					case ChangeType.Modified:
-						var paragraph = AppendParagraph(diffBox, string.Empty);
-						foreach (var subPiece in line.SubPieces)
+						var paragraph = AppendParagraph(oldDiffBox, string.Empty);
+						foreach (var subPiece in lineSubPieces)
 						{
-							switch (subPiece.Type)
+							switch (subPiece.oldPiece.Type)
 							{
-								case ChangeType.Unchanged: paragraph.Inlines.Add(NewRun(subPiece.Text, Brushes.Yellow)); break;
-								case ChangeType.Imaginary: paragraph.Inlines.Add(NewRun(string.Empty)); break;
-								case ChangeType.Inserted: paragraph.Inlines.Add(NewRun(subPiece.Text, Brushes.LightGreen)); break;
-								case ChangeType.Deleted: paragraph.Inlines.Add(NewRun(subPiece.Text, Brushes.OrangeRed)); break;
-								case ChangeType.Modified: paragraph.Inlines.Add(NewRun(subPiece.Text, Brushes.Yellow)); break;
+								case ChangeType.Unchanged: paragraph.Inlines.Add(NewRun(subPiece.oldPiece.Text ?? string.Empty, Brushes.Yellow)); break;
+								case ChangeType.Imaginary: paragraph.Inlines.Add(NewRun(subPiece.oldPiece.Text ?? string.Empty)); break;
+								case ChangeType.Inserted: paragraph.Inlines.Add(NewRun(subPiece.oldPiece.Text ?? string.Empty, Brushes.LightGreen)); break;
+								case ChangeType.Deleted: paragraph.Inlines.Add(NewRun(subPiece.oldPiece.Text ?? string.Empty, Brushes.OrangeRed)); break;
+								case ChangeType.Modified: paragraph.Inlines.Add(NewRun(subPiece.oldPiece.Text ?? string.Empty, Brushes.Yellow)); break;
 								default: throw new ArgumentException();
 							}
+							paragraph.Inlines.Add(NewRun(new string(BreakingSpace, subPiece.synchroLength - (subPiece.oldPiece.Text ?? string.Empty).Length), Brushes.Transparent, Brushes.Gray));
+						}
+						break;
+					default: throw new ArgumentException();
+				}
+
+				var newLine = line.Item2;
+				switch (newLine.Type)
+				{
+					case ChangeType.Unchanged: AppendParagraph(newDiffBox, newLine.Text ?? string.Empty); break;
+					case ChangeType.Imaginary: AppendParagraph(newDiffBox, newLine.Text ?? string.Empty, Brushes.Gray); break;
+					case ChangeType.Inserted: AppendParagraph(newDiffBox, newLine.Text ?? string.Empty, Brushes.LightGreen); break;
+					case ChangeType.Deleted: AppendParagraph(newDiffBox, newLine.Text ?? string.Empty, Brushes.OrangeRed); break;
+					case ChangeType.Modified:
+						var paragraph = AppendParagraph(newDiffBox, string.Empty);
+						foreach (var subPiece in lineSubPieces)
+						{
+							switch (subPiece.newPiece.Type)
+							{
+								case ChangeType.Unchanged: paragraph.Inlines.Add(NewRun(subPiece.newPiece.Text ?? string.Empty, Brushes.Yellow)); break;
+								case ChangeType.Imaginary: paragraph.Inlines.Add(NewRun(subPiece.newPiece.Text ?? string.Empty)); break;
+								case ChangeType.Inserted: paragraph.Inlines.Add(NewRun(subPiece.newPiece.Text ?? string.Empty, Brushes.LightGreen)); break;
+								case ChangeType.Deleted: paragraph.Inlines.Add(NewRun(subPiece.newPiece.Text ?? string.Empty, Brushes.OrangeRed)); break;
+								case ChangeType.Modified: paragraph.Inlines.Add(NewRun(subPiece.newPiece.Text ?? string.Empty, Brushes.Yellow)); break;
+								default: throw new ArgumentException();
+							}
+							paragraph.Inlines.Add(NewRun(new string(BreakingSpace, subPiece.synchroLength - (subPiece.newPiece.Text ?? string.Empty).Length), Brushes.Transparent, Brushes.Gray));
 						}
 						break;
 					default: throw new ArgumentException();
 				}
 			}
 		}
+
+		private static char BreakingSpace = '-';
 
 		private static Paragraph AppendParagraph(RichTextBox textBox, string text, Brush color = null)
 		{
@@ -150,9 +183,10 @@ Morbi tempor sem ac nisl lacinia imperdiet. Quisque ligula neque, tempor id tris
 			return paragraph;
 		}
 
-		private static Run NewRun(string text, Brush color = null) => new Run(text)
+		private static Run NewRun(string text, Brush background = null, Brush foreground = null) => new Run(text)
 		{
-			Background = color ?? Brushes.Transparent
+			Background = background ?? Brushes.Transparent,
+			Foreground = foreground ?? Brushes.Black,
 		};
 
 		private void RichTextBox_ScrollChanged(object sender, ScrollChangedEventArgs e)

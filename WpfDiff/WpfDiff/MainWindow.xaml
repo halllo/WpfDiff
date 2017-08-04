@@ -20,7 +20,12 @@
 		<TextBox Grid.Column="0" Grid.Row="1" x:Name="before" AcceptsReturn="True" TextWrapping="Wrap"/>
 		<TextBox Grid.Column="1" Grid.Row="1" x:Name="after" AcceptsReturn="True" TextWrapping="Wrap"/>
 
-		<RichTextBox Grid.Column="0" Grid.Row="2" x:Name="beforeDiff" AcceptsReturn="True" IsReadOnly="True" ScrollViewer.ScrollChanged="RichTextBox_ScrollChanged" />
-		<RichTextBox Grid.Column="1" Grid.Row="2" x:Name="afterDiff" AcceptsReturn="True" IsReadOnly="True" ScrollViewer.ScrollChanged="RichTextBox_ScrollChanged" />
+		<RichTextBox Grid.Column="0" Grid.Row="2" x:Name="beforeDiff" 
+					 FontFamily="Consolas" AcceptsReturn="True" IsReadOnly="False" 
+					 VerticalScrollBarVisibility="Visible" ScrollViewer.ScrollChanged="RichTextBox_ScrollChanged"/>
+		
+		<RichTextBox Grid.Column="1" Grid.Row="2" x:Name="afterDiff" 
+					 FontFamily="Consolas" AcceptsReturn="True" IsReadOnly="False" 
+					 VerticalScrollBarVisibility="Visible" ScrollViewer.ScrollChanged="RichTextBox_ScrollChanged" />
 	</Grid>
 </Window>
