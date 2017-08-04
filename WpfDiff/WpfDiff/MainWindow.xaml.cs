@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Media;
 using DiffPlex;
@@ -119,7 +120,7 @@ Morbi tempor sem ac nisl lacinia imperdiet. Quisque ligula neque, tempor id tris
 				switch (oldLine.Type)
 				{
 					case ChangeType.Unchanged: AppendParagraph(oldDiffBox, oldLine.Text ?? string.Empty); break;
-					case ChangeType.Imaginary: AppendParagraph(oldDiffBox, oldLine.Text ?? string.Empty, Brushes.Gray); break;
+					case ChangeType.Imaginary: AppendParagraph(oldDiffBox, new string(BreakingSpace, synchroLineLength), Brushes.Gray, Brushes.LightCyan); break;
 					case ChangeType.Inserted: AppendParagraph(oldDiffBox, oldLine.Text ?? string.Empty, Brushes.LightGreen); break;
 					case ChangeType.Deleted: AppendParagraph(oldDiffBox, oldLine.Text ?? string.Empty, Brushes.OrangeRed); break;
 					case ChangeType.Modified:
@@ -135,17 +136,18 @@ Morbi tempor sem ac nisl lacinia imperdiet. Quisque ligula neque, tempor id tris
 								case ChangeType.Modified: paragraph.Inlines.Add(NewRun(subPiece.oldPiece.Text ?? string.Empty, Brushes.Yellow)); break;
 								default: throw new ArgumentException();
 							}
-							paragraph.Inlines.Add(NewRun(new string(BreakingSpace, subPiece.synchroLength - (subPiece.oldPiece.Text ?? string.Empty).Length), Brushes.Transparent, Brushes.Gray));
+							paragraph.Inlines.Add(NewRun(new string(BreakingSpace, subPiece.synchroLength - (subPiece.oldPiece.Text ?? string.Empty).Length), Brushes.Gray, Brushes.LightCyan));
 						}
 						break;
 					default: throw new ArgumentException();
 				}
 
+
 				var newLine = line.Item2;
 				switch (newLine.Type)
 				{
 					case ChangeType.Unchanged: AppendParagraph(newDiffBox, newLine.Text ?? string.Empty); break;
-					case ChangeType.Imaginary: AppendParagraph(newDiffBox, newLine.Text ?? string.Empty, Brushes.Gray); break;
+					case ChangeType.Imaginary: AppendParagraph(newDiffBox, new string(BreakingSpace, synchroLineLength), Brushes.Gray, Brushes.LightCyan); break;
 					case ChangeType.Inserted: AppendParagraph(newDiffBox, newLine.Text ?? string.Empty, Brushes.LightGreen); break;
 					case ChangeType.Deleted: AppendParagraph(newDiffBox, newLine.Text ?? string.Empty, Brushes.OrangeRed); break;
 					case ChangeType.Modified:
@@ -161,7 +163,7 @@ Morbi tempor sem ac nisl lacinia imperdiet. Quisque ligula neque, tempor id tris
 								case ChangeType.Modified: paragraph.Inlines.Add(NewRun(subPiece.newPiece.Text ?? string.Empty, Brushes.Yellow)); break;
 								default: throw new ArgumentException();
 							}
-							paragraph.Inlines.Add(NewRun(new string(BreakingSpace, subPiece.synchroLength - (subPiece.newPiece.Text ?? string.Empty).Length), Brushes.Transparent, Brushes.Gray));
+							paragraph.Inlines.Add(NewRun(new string(BreakingSpace, subPiece.synchroLength - (subPiece.newPiece.Text ?? string.Empty).Length), Brushes.Gray, Brushes.LightCyan));
 						}
 						break;
 					default: throw new ArgumentException();
@@ -171,12 +173,15 @@ Morbi tempor sem ac nisl lacinia imperdiet. Quisque ligula neque, tempor id tris
 
 		private static char BreakingSpace = '-';
 
-		private static Paragraph AppendParagraph(RichTextBox textBox, string text, Brush color = null)
+		private static Paragraph AppendParagraph(RichTextBox textBox, string text, Brush background = null, Brush foreground = null)
 		{
 			var paragraph = new Paragraph(new Run(text))
 			{
 				LineHeight = 0.5,
-				Background = color ?? Brushes.Transparent
+				Background = background ?? Brushes.Transparent,
+				Foreground = foreground ?? Brushes.Black,
+				BorderBrush = Brushes.Blue,
+				BorderThickness = new Thickness(0, 0, 0, 1),
 			};
 
 			textBox.Document.Blocks.Add(paragraph);
@@ -189,12 +194,18 @@ Morbi tempor sem ac nisl lacinia imperdiet. Quisque ligula neque, tempor id tris
 			Foreground = foreground ?? Brushes.Black,
 		};
 
-		private void RichTextBox_ScrollChanged(object sender, ScrollChangedEventArgs e)
+		private void ScrollChanged(object sender, ScrollChangedEventArgs e)
 		{
-			var textToSync = (sender == this.beforeDiff) ? this.afterDiff : this.beforeDiff;
+			var scrollViewerToUpdate = sender == this.beforeDiff ? new TextBoxBase[] { this.afterDiff, this.after, this.before } :
+										sender == this.afterDiff ? new TextBoxBase[] { this.beforeDiff, this.after, this.before } :
+										sender == this.before ? new TextBoxBase[] { this.beforeDiff, this.after, this.afterDiff } :
+										sender == this.after ? new TextBoxBase[] { this.beforeDiff, this.afterDiff, this.before } : new TextBoxBase[0];
 
-			textToSync.ScrollToVerticalOffset(e.VerticalOffset);
-			textToSync.ScrollToHorizontalOffset(e.HorizontalOffset);
+			scrollViewerToUpdate.ToList().ForEach(textToSync =>
+			{
+				textToSync.ScrollToVerticalOffset(e.VerticalOffset);
+				textToSync.ScrollToHorizontalOffset(e.HorizontalOffset);
+			});
 		}
 	}
 }
