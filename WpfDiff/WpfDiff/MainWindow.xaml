@@ -5,32 +5,36 @@
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:local="clr-namespace:WpfDiff"
 		mc:Ignorable="d"
-		Title="MainWindow" Height="1024" Width="1024">
+		Title="WpfDiff" Height="1024" Width="1024">
 	<Grid>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition/>
 			<ColumnDefinition/>
 		</Grid.ColumnDefinitions>
 		<Grid.RowDefinitions>
+			<RowDefinition Height="1*"/>
 			<RowDefinition Height="Auto"/>
-			<RowDefinition/>
-			<RowDefinition/>
+			<RowDefinition Height="2*"/>
 		</Grid.RowDefinitions>
-		<Button Grid.ColumnSpan="2" Content="compare" Click="Button_Click"/>
-		<TextBox Grid.Column="0" Grid.Row="1" x:Name="before" 
-		         FontFamily="Consolas" AcceptsReturn="True" TextWrapping="Wrap" 
+		<GridSplitter Grid.Row="1" Grid.ColumnSpan="2"
+			HorizontalAlignment="Stretch" VerticalAlignment="Center"
+			Background="LightGray" ShowsPreview="true" Height="5"
+			/>
+
+		<TextBox Grid.Column="0" Grid.Row="0" x:Name="before" 
+				 Text="{Binding Vorher,UpdateSourceTrigger=PropertyChanged,Delay=500}" FontFamily="Consolas" Foreground="Gray" AcceptsReturn="True" TextWrapping="Wrap" 
 				 VerticalScrollBarVisibility="Visible" ScrollViewer.ScrollChanged="ScrollChanged"/>
 
-		<TextBox Grid.Column="1" Grid.Row="1" x:Name="after" 
-		         FontFamily="Consolas" AcceptsReturn="True" TextWrapping="Wrap" 
+		<TextBox Grid.Column="1" Grid.Row="0" x:Name="after" 
+				 Text="{Binding Nachher,UpdateSourceTrigger=PropertyChanged,Delay=500}" FontFamily="Consolas" Foreground="Gray" AcceptsReturn="True" TextWrapping="Wrap" 
 				 VerticalScrollBarVisibility="Visible" ScrollViewer.ScrollChanged="ScrollChanged"/>
 
 		<RichTextBox Grid.Column="0" Grid.Row="2" x:Name="beforeDiff"
-					 FontFamily="Consolas" AcceptsReturn="True" IsReadOnly="False" 
+					 local:SideBySideDiffModelVisualizer.Vorher="{Binding Diff}" FontFamily="Consolas" AcceptsReturn="True" IsReadOnly="True" 
 					 VerticalScrollBarVisibility="Visible" ScrollViewer.ScrollChanged="ScrollChanged"/>
 
 		<RichTextBox Grid.Column="1" Grid.Row="2" x:Name="afterDiff"
-					 FontFamily="Consolas" AcceptsReturn="True" IsReadOnly="False" 
+					 local:SideBySideDiffModelVisualizer.Nachher="{Binding Diff}" FontFamily="Consolas" AcceptsReturn="True" IsReadOnly="True" 
 					 VerticalScrollBarVisibility="Visible" ScrollViewer.ScrollChanged="ScrollChanged" />
 	</Grid>
 </Window>
