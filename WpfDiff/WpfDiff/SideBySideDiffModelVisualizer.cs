@@ -18,8 +18,8 @@ namespace WpfDiff
 			var richTextBox = (RichTextBox)dep;
 			var diff = (SideBySideDiffModel)e.NewValue;
 
-			var zippedDiffs = Enumerable.Zip(diff.OldText.Lines, diff.NewText.Lines, (oldLine, newLine) => Tuple.Create(oldLine, newLine)).ToList();
-			ShowVorherDiffs(richTextBox, zippedDiffs);
+			var zippedDiffs = Enumerable.Zip(diff.OldText.Lines, diff.NewText.Lines, (oldLine, newLine) => new OldNew<DiffPiece> { Old = oldLine, New = newLine }).ToList();
+			ShowDiffs(richTextBox, zippedDiffs, line => line.Old, piece => piece.Old);
 		}
 
 		public static SideBySideDiffModel GetNachher(DependencyObject obj) { return (SideBySideDiffModel)obj.GetValue(NachherProperty); }
@@ -30,8 +30,8 @@ namespace WpfDiff
 			var richTextBox = (RichTextBox)dep;
 			var diff = (SideBySideDiffModel)e.NewValue;
 
-			var zippedDiffs = Enumerable.Zip(diff.OldText.Lines, diff.NewText.Lines, (oldLine, newLine) => Tuple.Create(oldLine, newLine)).ToList();
-			ShowNachherDiffs(richTextBox, zippedDiffs);
+			var zippedDiffs = Enumerable.Zip(diff.OldText.Lines, diff.NewText.Lines, (oldLine, newLine) => new OldNew<DiffPiece> { Old = oldLine, New = newLine }).ToList();
+			ShowDiffs(richTextBox, zippedDiffs, line => line.New, piece => piece.New);
 		}
 
 
@@ -42,37 +42,38 @@ namespace WpfDiff
 
 
 
+		
 
-
-		private static void ShowVorherDiffs(RichTextBox oldDiffBox, System.Collections.Generic.List<Tuple<DiffPiece, DiffPiece>> lines)
+		private static void ShowDiffs(RichTextBox diffBox, System.Collections.Generic.List<OldNew<DiffPiece>> lines, Func<OldNew<DiffPiece>, DiffPiece> lineSelector, Func<OldNew<DiffPiece>, DiffPiece> pieceSelector)
 		{
-			oldDiffBox.Document.Blocks.Clear();
+			diffBox.Document.Blocks.Clear();
 			foreach (var line in lines)
 			{
-				var synchroLineLength = Math.Max(line.Item1.Text?.Length ?? 0, line.Item2.Text?.Length ?? 0);
-				var lineSubPieces = Enumerable.Zip(line.Item1.SubPieces, line.Item2.SubPieces, (oldPiece, newPiece) => new { oldPiece, newPiece, synchroLength = Math.Max(oldPiece.Text?.Length ?? 0, newPiece.Text?.Length ?? 0) });
+				var synchroLineLength = Math.Max(line.Old.Text?.Length ?? 0, line.New.Text?.Length ?? 0);
+				var lineSubPieces = Enumerable.Zip(line.Old.SubPieces, line.New.SubPieces, (oldPiece, newPiece) => new OldNew<DiffPiece> { Old =oldPiece, New = newPiece, Length = Math.Max(oldPiece.Text?.Length ?? 0, newPiece.Text?.Length ?? 0) });
 
-				var oldLine = line.Item1;
-				switch (oldLine.Type)
+				var oldNewLine = lineSelector(line);
+				switch (oldNewLine.Type)
 				{
-					case ChangeType.Unchanged: AppendParagraph(oldDiffBox, oldLine.Text ?? string.Empty); break;
-					case ChangeType.Imaginary: AppendParagraph(oldDiffBox, new string(BreakingSpace, synchroLineLength), Brushes.Gray, Brushes.LightCyan); break;
-					case ChangeType.Inserted: AppendParagraph(oldDiffBox, oldLine.Text ?? string.Empty, Brushes.LightGreen); break;
-					case ChangeType.Deleted: AppendParagraph(oldDiffBox, oldLine.Text ?? string.Empty, Brushes.OrangeRed); break;
+					case ChangeType.Unchanged: AppendParagraph(diffBox, oldNewLine.Text ?? string.Empty); break;
+					case ChangeType.Imaginary: AppendParagraph(diffBox, new string(BreakingSpace, synchroLineLength), Brushes.Gray, Brushes.LightCyan); break;
+					case ChangeType.Inserted: AppendParagraph(diffBox, oldNewLine.Text ?? string.Empty, Brushes.LightGreen); break;
+					case ChangeType.Deleted: AppendParagraph(diffBox, oldNewLine.Text ?? string.Empty, Brushes.OrangeRed); break;
 					case ChangeType.Modified:
-						var paragraph = AppendParagraph(oldDiffBox, string.Empty);
+						var paragraph = AppendParagraph(diffBox, string.Empty);
 						foreach (var subPiece in lineSubPieces)
 						{
-							switch (subPiece.oldPiece.Type)
+							var oldNewPiece = pieceSelector(subPiece);
+							switch (oldNewPiece.Type)
 							{
-								case ChangeType.Unchanged: paragraph.Inlines.Add(NewRun(subPiece.oldPiece.Text ?? string.Empty, Brushes.Yellow)); break;
-								case ChangeType.Imaginary: paragraph.Inlines.Add(NewRun(subPiece.oldPiece.Text ?? string.Empty)); break;
-								case ChangeType.Inserted: paragraph.Inlines.Add(NewRun(subPiece.oldPiece.Text ?? string.Empty, Brushes.LightGreen)); break;
-								case ChangeType.Deleted: paragraph.Inlines.Add(NewRun(subPiece.oldPiece.Text ?? string.Empty, Brushes.OrangeRed)); break;
-								case ChangeType.Modified: paragraph.Inlines.Add(NewRun(subPiece.oldPiece.Text ?? string.Empty, Brushes.Yellow)); break;
+								case ChangeType.Unchanged: paragraph.Inlines.Add(NewRun(oldNewPiece.Text ?? string.Empty, Brushes.Yellow)); break;
+								case ChangeType.Imaginary: paragraph.Inlines.Add(NewRun(oldNewPiece.Text ?? string.Empty)); break;
+								case ChangeType.Inserted: paragraph.Inlines.Add(NewRun(oldNewPiece.Text ?? string.Empty, Brushes.LightGreen)); break;
+								case ChangeType.Deleted: paragraph.Inlines.Add(NewRun(oldNewPiece.Text ?? string.Empty, Brushes.OrangeRed)); break;
+								case ChangeType.Modified: paragraph.Inlines.Add(NewRun(oldNewPiece.Text ?? string.Empty, Brushes.Yellow)); break;
 								default: throw new ArgumentException();
 							}
-							paragraph.Inlines.Add(NewRun(new string(BreakingSpace, subPiece.synchroLength - (subPiece.oldPiece.Text ?? string.Empty).Length), Brushes.Gray, Brushes.LightCyan));
+							paragraph.Inlines.Add(NewRun(new string(BreakingSpace, subPiece.Length - (oldNewPiece.Text ?? string.Empty).Length), Brushes.Gray, Brushes.LightCyan));
 						}
 						break;
 					default: throw new ArgumentException();
@@ -80,42 +81,13 @@ namespace WpfDiff
 			}
 		}
 
-		private static void ShowNachherDiffs(RichTextBox newDiffBox, System.Collections.Generic.List<Tuple<DiffPiece, DiffPiece>> lines)
+
+		private class OldNew<T>
 		{
-			newDiffBox.Document.Blocks.Clear();
-			foreach (var line in lines)
-			{
-				var synchroLineLength = Math.Max(line.Item1.Text?.Length ?? 0, line.Item2.Text?.Length ?? 0);
-				var lineSubPieces = Enumerable.Zip(line.Item1.SubPieces, line.Item2.SubPieces, (oldPiece, newPiece) => new { oldPiece, newPiece, synchroLength = Math.Max(oldPiece.Text?.Length ?? 0, newPiece.Text?.Length ?? 0) });
-
-				var newLine = line.Item2;
-				switch (newLine.Type)
-				{
-					case ChangeType.Unchanged: AppendParagraph(newDiffBox, newLine.Text ?? string.Empty); break;
-					case ChangeType.Imaginary: AppendParagraph(newDiffBox, new string(BreakingSpace, synchroLineLength), Brushes.Gray, Brushes.LightCyan); break;
-					case ChangeType.Inserted: AppendParagraph(newDiffBox, newLine.Text ?? string.Empty, Brushes.LightGreen); break;
-					case ChangeType.Deleted: AppendParagraph(newDiffBox, newLine.Text ?? string.Empty, Brushes.OrangeRed); break;
-					case ChangeType.Modified:
-						var paragraph = AppendParagraph(newDiffBox, string.Empty);
-						foreach (var subPiece in lineSubPieces)
-						{
-							switch (subPiece.newPiece.Type)
-							{
-								case ChangeType.Unchanged: paragraph.Inlines.Add(NewRun(subPiece.newPiece.Text ?? string.Empty, Brushes.Yellow)); break;
-								case ChangeType.Imaginary: paragraph.Inlines.Add(NewRun(subPiece.newPiece.Text ?? string.Empty)); break;
-								case ChangeType.Inserted: paragraph.Inlines.Add(NewRun(subPiece.newPiece.Text ?? string.Empty, Brushes.LightGreen)); break;
-								case ChangeType.Deleted: paragraph.Inlines.Add(NewRun(subPiece.newPiece.Text ?? string.Empty, Brushes.OrangeRed)); break;
-								case ChangeType.Modified: paragraph.Inlines.Add(NewRun(subPiece.newPiece.Text ?? string.Empty, Brushes.Yellow)); break;
-								default: throw new ArgumentException();
-							}
-							paragraph.Inlines.Add(NewRun(new string(BreakingSpace, subPiece.synchroLength - (subPiece.newPiece.Text ?? string.Empty).Length), Brushes.Gray, Brushes.LightCyan));
-						}
-						break;
-					default: throw new ArgumentException();
-				}
-			}
+			public T Old { get; set; }
+			public T New { get; set; }
+			public int Length { get; set; }
 		}
-
 
 
 
@@ -143,3 +115,4 @@ namespace WpfDiff
 		};
 	}
 }
+
