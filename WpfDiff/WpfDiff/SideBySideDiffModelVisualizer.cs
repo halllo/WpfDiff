@@ -1,10 +1,10 @@
-﻿using DiffPlex.DiffBuilder.Model;
-using System;
+﻿using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using DiffPlex.DiffBuilder.Model;
 
 namespace WpfDiff
 {
@@ -42,7 +42,7 @@ namespace WpfDiff
 
 
 
-		
+
 
 		private static void ShowDiffs(RichTextBox diffBox, System.Collections.Generic.List<OldNew<DiffPiece>> lines, Func<OldNew<DiffPiece>, DiffPiece> lineSelector, Func<OldNew<DiffPiece>, DiffPiece> pieceSelector)
 		{
@@ -50,7 +50,7 @@ namespace WpfDiff
 			foreach (var line in lines)
 			{
 				var synchroLineLength = Math.Max(line.Old.Text?.Length ?? 0, line.New.Text?.Length ?? 0);
-				var lineSubPieces = Enumerable.Zip(line.Old.SubPieces, line.New.SubPieces, (oldPiece, newPiece) => new OldNew<DiffPiece> { Old =oldPiece, New = newPiece, Length = Math.Max(oldPiece.Text?.Length ?? 0, newPiece.Text?.Length ?? 0) });
+				var lineSubPieces = Enumerable.Zip(line.Old.SubPieces, line.New.SubPieces, (oldPiece, newPiece) => new OldNew<DiffPiece> { Old = oldPiece, New = newPiece, Length = Math.Max(oldPiece.Text?.Length ?? 0, newPiece.Text?.Length ?? 0) });
 
 				var oldNewLine = lineSelector(line);
 				switch (oldNewLine.Type)
@@ -100,7 +100,7 @@ namespace WpfDiff
 				LineHeight = 0.5,
 				Background = background ?? Brushes.Transparent,
 				Foreground = foreground ?? Brushes.Black,
-				BorderBrush = Brushes.Blue,
+				BorderBrush = Brushes.DarkGray,
 				BorderThickness = new Thickness(0, 0, 0, 1),
 			};
 
